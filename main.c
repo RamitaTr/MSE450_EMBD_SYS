@@ -65,16 +65,16 @@ void PWM_Init(void){
     GPIO_PORTB_DEN_R |= 0x40;           // enable digital I/O on PB6
     GPIO_PORTB_PCTL_R &= ~0x0F000000;   // Clear PMC6 (Port Mux Control 6)
     GPIO_PORTB_PCTL_R |= 0x04000000;    // 4) Configure PB6 as PWM
-    SYSCTL_RCC_R |= 0x00100000;           // 5) Use PWM divider
+    SYSCTL_RCC_R |= 0x00100000;         // 5) Use PWM divider
     SYSCTL_RCC_R &= ~0x000E0000;        // Clear PWMDIV
     SYSCTL_RCC_R |= 0x00060000;         // Set divider /16: SysClock = 16MHz, PWM clock = 1MHz
     PWM0_0_CTL_R = 0;                   // 6) Configure PWM generator for count-down mode
     PWM0_0_GENA_R = 0x8C;               // Drive pwmA High on Load, low on CMPA down
-    //PWM0_0_GENB_R = 0x80C;              // Drive pwmA High on Load, low on CMPB down
+    //PWM0_0_GENB_R = 0x80C;            // Drive pwmA High on Load, low on CMPB down
     PWM0_0_LOAD_R = 10000 - 1;          // 7) Set period (-1 for counting down to 0)
                                         // (PWM clock source 8MHz / Desire PWM frequency 100MHz)
                                         // 80000 ticks per period
-    PWM0_0_CMPA_R = 10000/2 - 1;        // 8) Set the pulse width (zero duty cycle)
+    PWM0_0_CMPA_R = 9999 - 1;        // 8) Set the pulse width (zero duty cycle)
     PWM0_0_CTL_R |= 0x00000001;         // 9) Start PWM0
     PWM0_ENABLE_R |= 0x00000001;        // 10) Enable PWM outputs
 }
@@ -110,7 +110,9 @@ void SysTick_Handler(void){
 // Interrupt service routine for PF4
 void GPIO_Handler(void){
     GPIO_PORTF_ICR_R = 0x10;    // Acknowledge Flag for PF4
-    temp++;
     PWM0_0_CMPA_R-=1000;
-
+    if (PWM0_0_CMPA_R <= 1000){
+        PWM0_0_CMPA_R = 9999 - 1;
+    }
+    temp = PWM0_0_CMPA_R;
 }
