@@ -9,6 +9,10 @@ void wait_for_interrupts(void);
 
 volatile unsigned long count = 0;
 volatile unsigned long In, Out;
+unsigned int TOGGLE_COUNT = 1000;
+volatile int PortF = 0;
+volatile int temp = 0;
+volatile int dis_blue = 0;
 
 
 /* main */
@@ -39,6 +43,15 @@ void PortF_Init(void) {
     GPIO_PORTF_AFSEL_R = 0x00;              // disable alt function on PF
     GPIO_PORTF_PUR_R = 0x11;                // enable pull-up on PF0,PF4
     GPIO_PORTF_DEN_R = 0x1F;                // enable digital I/O on PF4-0
+    // Interrupt Initialization
+    GPIO_PORTF_IM_R &= ~0x10;   // Masked PF4
+    GPIO_PORTF_IS_R &= ~0x10;   // Edge Trigger
+    GPIO_PORTF_IBE_R &= ~0x10;  // Single Edge
+    GPIO_PORTF_IEV_R &= ~0x10;  // Falling Edge
+    GPIO_PORTF_ICR_R = 0x10;    // Clear Flag for PF4
+    GPIO_PORTF_IM_R |= 0x10;    // Unmasked PF4
+    NVIC_EN0_R = 0x40000000;    // enable interrupt 30 in NVIC
+    enable_interrupts();
 }
 
 
@@ -65,7 +78,23 @@ void wait_for_interrupts(void) {
 
 /* Interrupt service routine for SysTick Interrupt */
 // Executed every 12.5ns*(period)
+// TOGGLE_COUNT = 1000 call SysTick Interrupt every 1 sec
 void SysTick_Handler(void){
-    
-	
+    count++;
+    if (count == TOGGLE_COUNT - 1) {
+        count = 0;
+        // toggle bit at PF2
+        if (!dis_blue){
+            GPIO_PORTF_DATA_R ^= 0x04;
+        }
+        PortF = GPIO_PORTF_DATA_R;
+    }
+}
+
+// Interrupt service routine for PF4
+void GPIO_Handler(void){
+    GPIO_PORTF_ICR_R = 0x10;    // Acknowledge Flag for PF4
+    dis_blue ^= 1;
+    GPIO_PORTF_DATA_R &= ~0x04; // CLear PF4
+    GPIO_PORTF_DATA_R ^= 0x02;  // Toggle PF2
 }
